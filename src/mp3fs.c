@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
     // Convert string of the form "asdf qwer zxcv" to an
     // array of the form ["asdf", "qwer", "zxcv", NULL]
     if (params.ignores_str != NULL)  {
-      char* tmp = (char*) malloc(strlen(params.ignores_str));
+      char* tmp = (char*) malloc(strlen(params.ignores_str) + 1);
       strcpy(tmp, params.ignores_str);
       char* separators = " ";
       char* token = strtok(tmp, separators);
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
         token = strtok(tmp, separators);
         i = 0;
         while(token) {
-          params.ignores_array[i] = malloc(strlen(token));
+          params.ignores_array[i] = malloc(strlen(token) + 1);
           strcpy(params.ignores_array[i], token);
           token = strtok(NULL, separators);
           i++;    
