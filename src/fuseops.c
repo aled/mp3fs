@@ -68,6 +68,22 @@ void convert_path(char* path, int toflac) {
     }
 }
 
+int is_ignored_file(char* filename) {
+    if (params.ignores_array) {
+        char* ptr = strrchr(filename, '.');
+        if (ptr) {
+            char** extension_ptr = params.ignores_array;
+            while (*extension_ptr) {
+                if (strcmp(ptr, *extension_ptr) == 0) {
+                    return true;
+                }
+                extension_ptr++;
+            }
+        }
+    }
+    return false;
+}
+
 static int mp3fs_readlink(const char *path, char *buf, size_t size) {
     char* origpath;
     ssize_t len;
@@ -126,6 +142,11 @@ static int mp3fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
     
     while ((de = readdir(dp))) {
+       
+        if (is_ignored_file(de->d_name)) {
+            continue;
+        }
+        
         struct stat st;
         
         snprintf(origfile, strlen(origpath) + NAME_MAX + 2, "%s/%s", origpath,

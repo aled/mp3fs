@@ -39,6 +39,8 @@ extern struct mp3fs_params {
     int debug;
     int gainmode;
     float gainref;
+    const char *ignores_str;
+    char** ignores_array;
 } params;
 
 /* Fuse operations struct */

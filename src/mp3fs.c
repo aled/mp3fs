@@ -33,6 +33,8 @@ struct mp3fs_params params = {
     .debug              = 0,
     .gainmode           = 1,
     .gainref            = 89.0,
+    .ignores_str        = NULL,
+    .ignores_array      = NULL
 };
 
 enum {
@@ -54,6 +56,8 @@ static struct fuse_opt mp3fs_opts[] = {
     MP3FS_OPT("gainmode=%d",      gainmode, 0),
     MP3FS_OPT("--gainref=%f",     gainref, 0),
     MP3FS_OPT("gainref=%f",       gainref, 0),
+    MP3FS_OPT("-i %s",            ignores_str, 0),
+    MP3FS_OPT("--ignore=%s",      ignores_str, 0),
 
     FUSE_OPT_KEY("-h",            KEY_HELP),
     FUSE_OPT_KEY("--help",        KEY_HELP),
@@ -88,6 +92,8 @@ Encoding options:\n\
 General options:\n\
     -h, --help             display this help and exit\n\
     -V, --version          output version information and exit\n\
+    -i  --ignore           do not include files with specified extensions in the mp3dir,\n\
+                           e.g. --ignore='.ogg .m4a' or -i wav\n\
 \n", stdout);
 }
 
@@ -158,6 +164,37 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Convert string of the form "asdf qwer zxcv" to an
+    // array of the form ["asdf", "qwer", "zxcv", NULL]
+    if (params.ignores_str != NULL)  {
+      char* tmp = (char*) malloc(strlen(params.ignores_str));
+      strcpy(tmp, params.ignores_str);
+      char* separators = " ";
+      char* token = strtok(tmp, separators);
+      int i = 0;
+      while(token) {
+        token = strtok(NULL, separators);
+        i++;
+      }
+
+      if (i > 0) {
+        params.ignores_array = (char**) malloc(sizeof(char*) * (i + 1)); // +1 to store trailing NULL
+        strcpy(tmp, params.ignores_str);
+        token = strtok(tmp, separators);
+        i = 0;
+        while(token) {
+          params.ignores_array[i] = malloc(strlen(token));
+          strcpy(params.ignores_array[i], token);
+          token = strtok(NULL, separators);
+          i++;    
+        }
+        params.ignores_array[i] = NULL;
+      }
+
+      if (tmp)
+        free(tmp);
+    }
+
     /* Log to the screen if debug is enabled. */
     openlog("mp3fs", params.debug ? LOG_PERROR : 0, LOG_USER);
 
@@ -167,14 +204,23 @@ int main(int argc, char *argv[]) {
                 "quality:   %u\n"
                 "gainmode:  %d\n"
                 "gainref:   %f\n"
+                "ignores:   %s\n"
                 "\n",
                 params.basepath, params.bitrate,
-                params.quality, params.gainmode, params.gainref);
+                params.quality, params.gainmode, params.gainref, params.ignores_str);
 
     // start FUSE
     ret = fuse_main(args.argc, args.argv, &mp3fs_ops, NULL);
 
     fuse_opt_free_args(&args);
+
+    char** extension_ptr = params.ignores_array;
+    while (*extension_ptr) {
+      free(*extension_ptr);
+      extension_ptr++;
+    }
+    if (params.ignores_array)
+      free(params.ignores_array);
 
     return ret;
 }
